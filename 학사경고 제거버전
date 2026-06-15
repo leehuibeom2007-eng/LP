@@ -1,0 +1,59 @@
+import pygame
+
+class GameScaleManager:
+    def __init__(self, font, big_font):
+        """main.py에서 사용하는 폰트를 그대로 넘겨받아 초기화합니다."""
+        self.font = font
+        self.big_font = big_font
+
+    def check_collisions(self, player, items, obstacles):
+        """
+        [심판 역할] 주인공과 아이템, 장애물의 충돌을 판정하고 점수/목숨을 계산합니다.
+        반환값: 현재 게임의 상태 ("game", "fail", "restart_1")
+        """
+        p_rect = player.rect()
+
+        # 1. 아이템 충돌 확인 및 점수 계산
+        for item in items[:]:
+            if p_rect.colliderect(item.rect):
+                if item.kind in ["A+", "Gold"]:
+                    player.score += 5
+                elif item.kind in ["F", "Red"]:
+                    player.score -= 5
+                elif item.kind == "R":
+                    items.remove(item)
+                    return "restart_1"  # Stage 1부터 다시 시작하라는 신호를 보냄
+                items.remove(item)
+
+        # 2. 장애물 충돌 확인 및 HP 계산
+        for obs in obstacles[:]:
+            if p_rect.colliderect(obs.rect):
+                player.hp -= 1
+                obstacles.remove(obs)
+                if player.hp <= 0:
+                    return "fail"  # 목숨이 다하면 fail 상태 신호를 보냄
+                break
+
+        return "game"  # 충돌 체크 후에도 게임이 정상 진행 중일 때
+
+    def draw_ui(self, screen, player, stage):
+        """[전광판 역할] 화면 상단에 실시간 점수, HP, STAGE를 렌더링합니다."""
+        score_txt = self.font.render(f"점수: {player.score}", True, (255, 255, 255))
+        hp_txt = self.font.render(f"HP: {player.hp}", True, (255, 255, 255))
+        stage_txt = self.font.render(f"STAGE {stage}", True, (255, 255, 0))
+
+        screen.blit(score_txt, (20, 20))
+        screen.blit(hp_txt, (20, 60))
+        screen.blit(stage_txt, (20, 100))
+
+    def draw_fail_screen(self, screen, width, height):
+        """[엔딩 화면] 게임 오버 시 화면을 렌더링합니다. (학사경고 문구 제거 버전)"""
+        screen.fill((0, 0, 0))
+        
+        # 문구 설정
+        title_txt = self.big_font.render("GAME OVER", True, (255, 255, 255))
+        sub_txt = self.font.render("ENTER 키를 눌러 이번 스테이지 재시작", True, (255, 255, 255))
+        
+        # 화면 중앙 정렬하여 그리기 (학사경고가 빠진 자리에 맞춰 간격을 조정했습니다)
+        screen.blit(title_txt, (width // 2 - title_txt.get_width() // 2, height // 2 - 60))
+        screen.blit(sub_txt, (width // 2 - sub_txt.get_width() // 2, height // 2 + 40))
